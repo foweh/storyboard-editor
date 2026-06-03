@@ -30,6 +30,7 @@ const inputRef = ref<HTMLInputElement | null>(null)
 const textRef = ref<HTMLTextAreaElement | null>(null)
 const richRef = ref<HTMLDivElement | null>(null)
 
+const cellRef = ref<HTMLDivElement | null>(null)
 const showBar = ref(false)
 const barPos = ref({ top: 0, left: 0 })
 
@@ -103,8 +104,11 @@ function onBlur() {
 function onDocClick(e: MouseEvent) {
   if (!editing.value) return
   const t = e.target as HTMLElement
-  // 点击在单元格内或工具栏上 → 不处理
-  if (t.closest('.rich-cell') || t.closest('.rich-toolbar')) return
+  // 点击在工具栏上 → 不处理
+  if (t.closest('.rich-toolbar')) return
+  // 点击在当前单元格内 → 不处理
+  if (cellRef.value?.contains(t)) return
+  // 点击在其他任何地方（包括其他单元格）→ 关闭
   if (props.rich && richRef.value) editVal.value = richRef.value.innerHTML
   close()
 }
@@ -114,7 +118,7 @@ onUnmounted(() => document.removeEventListener('mousedown', onDocClick))
 </script>
 
 <template>
-  <div :class="['rich-cell', { editing }]" @click="open">
+  <div ref="cellRef" :class="['rich-cell', { editing }]" @click="open">
     <!-- ── 编辑模式 ── -->
     <template v-if="editing">
       <input
