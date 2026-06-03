@@ -50,7 +50,13 @@ function isActiveProject(id: string) {
   return projectList.value.find(p => p.id === id)?.name === state.project
 }
 
-onMounted(refreshProjectList)
+onMounted(() => {
+  refreshProjectList()
+  // 首次启动：项目名称为默认且无分镜 → 弹出命名窗口
+  if (state.project === '未命名项目' && state.shots.length === 0) {
+    nextTick(() => openNewProject())
+  }
+})
 
 function openNewProject() {
   newProjectName.value = ''
@@ -59,8 +65,14 @@ function openNewProject() {
 }
 
 function confirmNewProject() {
-  const name = newProjectName.value.trim() || undefined
-  resetAll(name)
+  const name = newProjectName.value.trim()
+  // 首次启动：尚无分镜，直接改名而不是新建项目
+  if (state.shots.length === 0 && state.scenes.length === 1 && state.scenes[0].name === '第1场') {
+    state.project = name || '未命名项目'
+    // 响应式 watch 会自动持久化
+  } else {
+    resetAll(name || undefined)
+  }
   showNewProject.value = false
 }
 
