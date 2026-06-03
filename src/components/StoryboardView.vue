@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { state, activeShots, moveShot, toggleSel, addShots } from '../stores/index'
+import { state, activeShots, moveShot, toggleSel, addShots, setActiveScene, removeScene } from '../stores/index'
 import TableHeader from './TableHeader.vue'
 import ShotRow from './ShotRow.vue'
 import NewShotMenu from './NewShotMenu.vue'
@@ -52,7 +52,20 @@ function onDrop(id: string) {
         </div>
         <NewShotMenu />
         <div class="scene-tags">
-          <span v-for="sc in state.scenes" :key="sc.id" class="scene-tag">{{ sc.name }}</span>
+          <span
+            v-for="sc in state.scenes"
+            :key="sc.id"
+            :class="['scene-tag', { active: sc.id === state.activeSceneId }]"
+            @click="setActiveScene(sc.id)"
+          >
+            {{ sc.name }}
+            <button
+              v-if="state.scenes.length > 1"
+              class="scene-del"
+              @click.stop="removeScene(sc.id)"
+              title="删除场"
+            >✕</button>
+          </span>
         </div>
       </div>
       <div class="sb-toolbar-right">
@@ -152,16 +165,50 @@ function onDrop(id: string) {
   font-weight: 600;
 }
 
-.scene-tags { display: flex; gap: 4px; }
+.scene-tags { display: flex; gap: 4px; flex-wrap: wrap; }
 
 .scene-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 3px 8px;
   background: #f1f5f9;
   color: #475569;
   border-radius: 4px;
   font-size: 11px;
   font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s;
+  user-select: none;
 }
+
+.scene-tag:hover { background: #e2e8f0; }
+.scene-tag.active {
+  background: var(--accent-light);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.scene-del {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 9px;
+  line-height: 1;
+  padding: 0;
+  opacity: 0;
+  transition: all 0.12s;
+}
+
+.scene-tag:hover .scene-del { opacity: 1; }
+.scene-del:hover { background: #fee2e2; color: var(--danger); }
 
 .sb-table-wrap {
   flex: 1;

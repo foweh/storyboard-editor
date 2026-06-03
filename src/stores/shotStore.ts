@@ -2,7 +2,7 @@ import type { Shot } from '../types'
 import { state, uid, reorder, autoFitWidths, autoFitWidthsDebounced } from './shared'
 
 export function addShots(count: number = 1) {
-  const sid = state.scenes[0]?.id
+  const sid = state.activeSceneId
   if (!sid) return
   for (let i = 0; i < count; i++) {
     const s: Shot = {

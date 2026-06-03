@@ -40,13 +40,13 @@ export const state = reactive({
   nextNum: saved.nextNum ?? 1,
   batch: false as boolean,
   selected: new Set<string>(),
+  activeSceneId: saved.activeSceneId ?? (saved.scenes?.[0]?.id ?? uid()),
 })
 
 export const activeShots = computed(() => {
-  const sc = state.scenes[0]
-  if (!sc) return []
+  if (!state.activeSceneId) return []
   return state.shots
-    .filter(s => s.sceneId === sc.id)
+    .filter(s => s.sceneId === state.activeSceneId)
     .sort((a, b) => a.order - b.order)
 })
 
@@ -68,6 +68,7 @@ export function persist() {
     scenes: state.scenes.map(s => ({ ...s })),
     cols: state.cols.map(c => ({ ...c, locked: undefined })),
     nextNum: state.nextNum,
+    activeSceneId: state.activeSceneId,
   }
   localStorage.setItem(KEY, JSON.stringify(data))
 }
@@ -75,8 +76,10 @@ export function persist() {
 watch(() => ({ ...state, shots: [...state.shots], scenes: [...state.scenes] }), () => persist(), { deep: true })
 
 export function resetAll() {
+  const firstId = uid()
   state.shots = []
-  state.scenes = [{ id: uid(), name: '第1场', order: 0 }]
+  state.scenes = [{ id: firstId, name: '第1场', order: 0 }]
+  state.activeSceneId = firstId
   state.nextNum = 1
   state.project = '未命名项目'
   persist()
