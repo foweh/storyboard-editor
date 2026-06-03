@@ -30,6 +30,9 @@ const emit = defineEmits<{
     }]"
     draggable="true"
     @dragstart="(e) => {
+      // 只有从排序列（⠿手柄）拖拽才生效
+      const handle = (e.target as HTMLElement).closest('.s-sort')
+      if (!handle) { e.preventDefault(); return }
       e.dataTransfer!.effectAllowed = 'move'
       e.dataTransfer!.setData('text/plain', shot.id)
       emit('dragStart', shot.id)
@@ -175,10 +178,10 @@ const emit = defineEmits<{
   min-height: 52px;
   flex-shrink: 0;
   overflow: hidden;
-  cursor: pointer;
 }
 
-.s-sort { justify-content: center; flex-direction: column; gap: 1px; }
+.s-sort { justify-content: center; flex-direction: column; gap: 1px; cursor: grab; }
+.s-sort:active { cursor: grabbing; }
 .s-num { justify-content: center; }
 .s-img { padding: 2px 4px; display: flex; align-items: center; justify-content: center; }
 .s-text { align-items: stretch; }
