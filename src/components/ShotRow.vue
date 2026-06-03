@@ -23,12 +23,17 @@ const emit = defineEmits<{
 <template>
   <div
     :class="['shot-row', {
-      dragging, 'drag-over': dragOver,
+      dragging,
+      'drag-over': dragOver,
       selected: selected && state.batch,
       batch: state.batch,
     }]"
     draggable="true"
-    @dragstart="(e) => { e.dataTransfer?.setData('text/plain', shot.id); emit('dragStart', shot.id) }"
+    @dragstart="(e) => {
+      e.dataTransfer!.effectAllowed = 'move'
+      e.dataTransfer!.setData('text/plain', shot.id)
+      emit('dragStart', shot.id)
+    }"
     @dragover="(e) => emit('dragOver', e, shot.id)"
     @dragleave="emit('dragLeave', shot.id)"
     @drop="emit('drop', shot.id)"
@@ -158,7 +163,7 @@ const emit = defineEmits<{
 
 .shot-row:hover { background: #f8fafc; }
 .shot-row:hover .row-del { opacity: 1; }
-.shot-row.dragging { opacity: 0.35; background: #eef2ff; }
+.shot-row.dragging { opacity: 0.3; background: #eef2ff; }
 .shot-row.drag-over { border-top: 2px solid var(--accent); }
 .shot-row.selected { background: #eef2ff; }
 

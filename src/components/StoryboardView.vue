@@ -27,7 +27,6 @@ function onDrop(id: string) {
 
 <template>
   <div class="sb-view">
-    <!-- 工具栏 -->
     <div class="sb-toolbar">
       <div class="sb-toolbar-left">
         <div class="sb-title-wrap">
@@ -45,8 +44,7 @@ function onDrop(id: string) {
       </div>
     </div>
 
-    <!-- 表格 -->
-    <div class="sb-table-wrap">
+    <div class="sb-table-wrap" @dragover.prevent>
       <div class="sb-table">
         <TableHeader :cols="state.cols" :batch="state.batch" />
         <div class="sb-body">
@@ -71,7 +69,6 @@ function onDrop(id: string) {
       </div>
     </div>
 
-    <!-- 底部 -->
     <div class="sb-footer">
       <span>{{ activeShots.length }} 个分镜</span>
       <span v-if="activeShots.length">
@@ -84,7 +81,6 @@ function onDrop(id: string) {
 <style scoped>
 .sb-view { display: flex; flex-direction: column; height: 100%; }
 
-/* 工具栏 */
 .sb-toolbar {
   display: flex;
   align-items: center;
@@ -127,7 +123,6 @@ function onDrop(id: string) {
   font-weight: 500;
 }
 
-/* 表格 */
 .sb-table-wrap {
   flex: 1;
   overflow: auto;
@@ -140,7 +135,6 @@ function onDrop(id: string) {
 .sb-table { min-width: 100%; display: flex; flex-direction: column; }
 .sb-body { flex: 1; }
 
-/* 空状态 */
 .sb-empty {
   display: flex;
   flex-direction: column;
@@ -153,7 +147,6 @@ function onDrop(id: string) {
 .empty-icon { font-size: 40px; margin-bottom: 10px; opacity: 0.4; }
 .sb-empty p { font-size: 14px; }
 
-/* 底部 */
 .sb-footer {
   display: flex;
   gap: 16px;
