@@ -131,7 +131,11 @@ if (loaded.shots) {
     // 从独立存储加载
     if (!s.image || s.image === true) {
       const img = loadShotImage(s.id)
-      if (img) s.image = img
+      if (img) {
+        s.image = img
+      } else if (s.image === true) {
+        s.image = null // 标记有图但存丢失 → 安全降级
+      }
     }
   })
 }
@@ -197,10 +201,13 @@ export function persist() {
   const data = snapshot()
 
   // 图片数据独立存储，主数据体不存 base64
+  // 保存成功后才标记清除，防止丢失
   data.shots.forEach((s: any) => {
     if (s.image && typeof s.image === 'string' && s.image.startsWith('data:')) {
-      saveShotImage(s.id, s.image)
-      s.image = true // 标记有图，不存实际数据
+      if (saveShotImage(s.id, s.image)) {
+        s.image = true // 标记有图，不存实际数据
+      }
+      // 保存失败则保留 base64 在主数据中
     }
   })
 
