@@ -13,6 +13,8 @@ export interface Shot {
   sceneExpect: string
   sound: string
   camera: string
+  /** 用户拖拽设定的行高（px），undefined 表示自动撑高 */
+  rowHeight?: number
 }
 
 /** 场次 */

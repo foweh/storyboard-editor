@@ -18,6 +18,25 @@ const emit = defineEmits<{
   drop: [string]
   toggleSelect: [string]
 }>()
+
+/* ── 行高拖拽 ── */
+function startResize(e: MouseEvent) {
+  e.preventDefault()
+  const row = (e.currentTarget as HTMLElement).closest('.shot-row')!
+  const startY = e.clientY
+  const startH = row.getBoundingClientRect().height
+
+  const move = (ev: MouseEvent) => {
+    const newH = Math.max(52, startH + ev.clientY - startY)
+    updateShot(props.shot.id, { rowHeight: Math.round(newH) })
+  }
+  const up = () => {
+    document.removeEventListener('mousemove', move)
+    document.removeEventListener('mouseup', up)
+  }
+  document.addEventListener('mousemove', move)
+  document.addEventListener('mouseup', up)
+}
 </script>
 
 <template>
@@ -28,6 +47,7 @@ const emit = defineEmits<{
       selected: selected && state.batch,
       batch: state.batch,
     }]"
+    :style="shot.rowHeight ? { height: shot.rowHeight + 'px' } : {}"
     @dragover="(e) => emit('dragOver', e, shot.id)"
     @dragleave="emit('dragLeave', shot.id)"
     @drop="emit('drop', shot.id)"
@@ -70,7 +90,7 @@ const emit = defineEmits<{
     <!-- 景别 -->
     <div
       v-if="state.cols.find(c => c.key === 'frame')?.visible"
-      class="s-cell s-text"
+      class="s-cell s-text s-text-center"
       :style="{ width: state.cols.find(c => c.key === 'frame')?.width + 'px' }"
     >
       <RichCell :modelValue="shot.frame" @update:modelValue="(v) => updateShot(shot.id, { frame: String(v) })" />
@@ -79,7 +99,7 @@ const emit = defineEmits<{
     <!-- 时长 -->
     <div
       v-if="state.cols.find(c => c.key === 'duration')?.visible"
-      class="s-cell s-text"
+      class="s-cell s-text s-text-center"
       :style="{ width: state.cols.find(c => c.key === 'duration')?.width + 'px' }"
     >
       <RichCell :modelValue="shot.duration" type="number" @update:modelValue="(v) => updateShot(shot.id, { duration: Number(v) })" />
@@ -88,7 +108,7 @@ const emit = defineEmits<{
     <!-- 内容 -->
     <div
       v-if="state.cols.find(c => c.key === 'content')?.visible"
-      class="s-cell s-text s-content"
+      class="s-cell s-text s-content s-left"
       :style="{ width: state.cols.find(c => c.key === 'content')?.width + 'px' }"
     >
       <RichCell :modelValue="shot.content" rich @update:modelValue="(v) => updateShot(shot.id, { content: String(v) })" />
@@ -97,7 +117,7 @@ const emit = defineEmits<{
     <!-- 备注 -->
     <div
       v-if="state.cols.find(c => c.key === 'notes')?.visible"
-      class="s-cell s-text"
+      class="s-cell s-text s-left"
       :style="{ width: state.cols.find(c => c.key === 'notes')?.width + 'px' }"
     >
       <RichCell :modelValue="shot.notes" rich @update:modelValue="(v) => updateShot(shot.id, { notes: String(v) })" />
@@ -106,7 +126,7 @@ const emit = defineEmits<{
     <!-- 参考 -->
     <div
       v-if="state.cols.find(c => c.key === 'reference')?.visible"
-      class="s-cell s-text"
+      class="s-cell s-text s-text-center"
       :style="{ width: state.cols.find(c => c.key === 'reference')?.width + 'px' }"
     >
       <RichCell :modelValue="shot.reference" rich @update:modelValue="(v) => updateShot(shot.id, { reference: String(v) })" />
@@ -115,7 +135,7 @@ const emit = defineEmits<{
     <!-- 场景预期 -->
     <div
       v-if="state.cols.find(c => c.key === 'sceneExpect')?.visible"
-      class="s-cell s-text"
+      class="s-cell s-text s-text-center"
       :style="{ width: state.cols.find(c => c.key === 'sceneExpect')?.width + 'px' }"
     >
       <RichCell :modelValue="shot.sceneExpect" rich @update:modelValue="(v) => updateShot(shot.id, { sceneExpect: String(v) })" />
@@ -124,7 +144,7 @@ const emit = defineEmits<{
     <!-- 声音 -->
     <div
       v-if="state.cols.find(c => c.key === 'sound')?.visible"
-      class="s-cell s-text"
+      class="s-cell s-text s-text-center"
       :style="{ width: state.cols.find(c => c.key === 'sound')?.width + 'px' }"
     >
       <RichCell :modelValue="shot.sound" rich @update:modelValue="(v) => updateShot(shot.id, { sound: String(v) })" />
@@ -133,7 +153,7 @@ const emit = defineEmits<{
     <!-- 摄像机角度 -->
     <div
       v-if="state.cols.find(c => c.key === 'camera')?.visible"
-      class="s-cell s-text"
+      class="s-cell s-text s-text-center"
       :style="{ width: state.cols.find(c => c.key === 'camera')?.width + 'px' }"
     >
       <RichCell :modelValue="shot.camera" rich @update:modelValue="(v) => updateShot(shot.id, { camera: String(v) })" />
@@ -149,6 +169,7 @@ const emit = defineEmits<{
     </div>
 
     <button class="row-del" @click="removeShot(shot.id)" title="删除">✕</button>
+    <div class="row-resize" @mousedown.prevent="startResize" title="拖拽调整行高" />
   </div>
 </template>
 
@@ -228,4 +249,28 @@ const emit = defineEmits<{
 }
 
 .row-del:hover { background: #fee2e2; color: var(--danger); }
+
+/* ── 行高拖拽手柄 ── */
+.row-resize {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  cursor: row-resize;
+  z-index: 4;
+  transition: background 0.12s;
+}
+
+.row-resize:hover,
+.row-resize:active {
+  background: var(--accent);
+  opacity: 0.25;
+}
+
+/* ── 文字对齐 ── */
+.s-text-center :deep(.rich-cell) { justify-content: center; }
+.s-text-center :deep(.cell-pv) { text-align: center; }
+.s-left :deep(.rich-cell) { justify-content: flex-start; }
+.s-left :deep(.cell-pv) { text-align: left; }
 </style>

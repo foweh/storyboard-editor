@@ -1,4 +1,4 @@
-export { state, activeShots, resetAll } from './shared'
+export { state, activeShots, resetAll, autoFitWidths, autoFitWidthsDebounced } from './shared'
 export { addShots, removeShot, removeShots, updateShot, moveShot } from './shotStore'
 export { addScene, removeScene } from './sceneStore'
 export { toggleCol, setColWidth } from './columnStore'

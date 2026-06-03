@@ -72,6 +72,7 @@ function onDrop(id: string) {
               v-for="c in state.cols.filter(x => x.visible)"
               :key="c.key"
               class="s-cell"
+              :class="{ 'ph-center': !['content','notes'].includes(c.key), 'ph-left': ['content','notes'].includes(c.key) }"
               :style="{ width: c.width + 'px' }"
             >
               <span v-if="c.key === 'sort'" class="ph-handle">⠿</span>
@@ -224,4 +225,9 @@ function onDrop(id: string) {
 .ph-dash { font-size: 12px; color: #cbd5e1; }
 
 .new-shot-placeholder .s-check { justify-content: center; }
+
+/* 占位行对齐 */
+.ph-center { justify-content: center; }
+.ph-left { justify-content: flex-start; }
+.ph-left .ph-text { padding-left: 4px; }
 </style>

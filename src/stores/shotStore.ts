@@ -1,5 +1,5 @@
 import type { Shot } from '../types'
-import { state, uid, reorder } from './shared'
+import { state, uid, reorder, autoFitWidths, autoFitWidthsDebounced } from './shared'
 
 export function addShots(count: number = 1) {
   const sid = state.scenes[0]?.id
@@ -17,6 +17,7 @@ export function addShots(count: number = 1) {
   }
   state.nextNum += count
   reorder()
+  autoFitWidths()
 }
 
 export function removeShot(id: string) {
@@ -33,6 +34,7 @@ export function removeShots(ids: string[]) {
 export function updateShot(id: string, patch: Partial<Shot>) {
   const s = state.shots.find(x => x.id === id)
   if (s) Object.assign(s, patch)
+  autoFitWidthsDebounced()
 }
 
 export function moveShot(id: string, target: number) {

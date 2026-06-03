@@ -6,13 +6,19 @@
  * - 默认 → 纯文本输入
  * - 单击进入编辑，回车保存（富文本 Shift+Enter 换行）
  */
-import { ref, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps<{
   modelValue: string | number
   rich?: boolean
   type?: 'text' | 'number'
 }>()
+
+/** 富文本内容是否含换行 → 取消截断，自动撑高 */
+const hasBr = computed(() => {
+  const v = String(props.modelValue ?? '')
+  return v.includes('<br>') || v.includes('\n')
+})
 
 const emit = defineEmits<{ 'update:modelValue': [string | number] }>()
 
@@ -165,7 +171,7 @@ onUnmounted(() => document.removeEventListener('mousedown', onDocClick))
       <span
         v-if="rich"
         class="cell-pv"
-        :class="{ empty: !modelValue }"
+        :class="{ empty: !modelValue, 'cell-pv-multi': hasBr }"
         v-html="String(modelValue) || '—'"
       />
       <span
@@ -251,6 +257,15 @@ onUnmounted(() => document.removeEventListener('mousedown', onDocClick))
   -webkit-box-orient: vertical;
   max-width: 100%;
   pointer-events: none;
+}
+
+/* 含换行的富文本 → 不截断，自动撑高 */
+.cell-pv-multi {
+  display: block;
+  -webkit-line-clamp: unset;
+  -webkit-box-orient: unset;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .cell-pv :deep(p) { margin: 2px 0; }

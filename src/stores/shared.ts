@@ -1,5 +1,5 @@
 import { reactive, computed, watch } from 'vue'
-import type { Shot, Scene, ColumnDef, Tab } from '../types'
+import type { Shot, Scene, ColumnDef, ColumnKey, Tab } from '../types'
 
 const KEY = 'fenjing-data'
 
@@ -80,4 +80,31 @@ export function resetAll() {
   state.nextNum = 1
   state.project = '未命名项目'
   persist()
+}
+
+/* ── 自适应列宽 ── */
+const TEXT_COLS: ColumnKey[] = ['frame', 'duration', 'content', 'notes', 'reference', 'sceneExpect', 'sound', 'camera']
+
+export function autoFitWidths() {
+  TEXT_COLS.forEach(key => {
+    const col = state.cols.find(c => c.key === key)
+    if (!col || col.locked) return
+
+    let maxLen = 8
+    state.shots.forEach(shot => {
+      const val = String((shot as any)[key] ?? '')
+      const plain = val.replace(/<[^>]*>/g, '')
+      maxLen = Math.max(maxLen, plain.length)
+    })
+
+    // 中文字符 ~1em (12px)，ASCII ~0.5em，取平均 8px/字 + 两侧 padding 24px
+    const est = Math.round(Math.max(60, Math.min(400, maxLen * 8 + 24)))
+    if (col.width !== est) col.width = est
+  })
+}
+
+let fitTimer: number | undefined
+export function autoFitWidthsDebounced() {
+  if (fitTimer !== undefined) clearTimeout(fitTimer)
+  fitTimer = window.setTimeout(() => { fitTimer = undefined; autoFitWidths() }, 400)
 }
