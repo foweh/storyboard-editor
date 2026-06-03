@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { state, activeShots, moveShot, toggleSel, addShots, setActiveScene, removeScene } from '../stores/index'
 import TableHeader from './TableHeader.vue'
 import ShotRow from './ShotRow.vue'
@@ -6,17 +7,17 @@ import NewShotMenu from './NewShotMenu.vue'
 import ColumnConfig from './ColumnConfig.vue'
 import BatchBar from './BatchBar.vue'
 
-let dragId: string | null = null
-let overId: string | null = null
+const dragId = ref<string | null>(null)
+const overId = ref<string | null>(null)
 /** 'before' = 插入到目标行上方，'after' = 插入到目标行下方 */
-let overPos: 'before' | 'after' = 'before'
+const overPos = ref<'before' | 'after'>('before')
 
-function onStart(id: string) { dragId = id }
+function onStart(id: string) { dragId.value = id }
 
 function onOver(e: DragEvent, id: string) {
   e.preventDefault()
-  if (id === dragId) {
-    if (overId === id) overId = null
+  if (id === dragId.value) {
+    if (overId.value === id) overId.value = null
     return
   }
   // 计算鼠标在目标行中的位置 → 决定插入线在上方还是下方
@@ -24,21 +25,21 @@ function onOver(e: DragEvent, id: string) {
   const rect = row?.getBoundingClientRect()
   if (row && rect) {
     const midY = rect.top + rect.height / 2
-    overPos = e.clientY < midY ? 'before' : 'after'
+    overPos.value = e.clientY < midY ? 'before' : 'after'
   }
-  overId = id
+  overId.value = id
 }
-function onLeave(id: string) { if (overId === id) overId = null }
+function onLeave(id: string) { if (overId.value === id) overId.value = null }
 
 function onDrop(id: string) {
-  if (id && dragId && dragId !== id) {
+  if (id && dragId.value && dragId.value !== id) {
     const t = activeShots.value.find(s => s.id === id)
     if (t) {
       // before → 插在 target 的位置；after → 插在 target 之后
-      moveShot(dragId, overPos === 'before' ? t.order : t.order + 1)
+      moveShot(dragId.value, overPos.value === 'before' ? t.order : t.order + 1)
     }
   }
-  dragId = null; overId = null; overPos = 'before'
+  dragId.value = null; overId.value = null; overPos.value = 'before'
 }
 </script>
 
