@@ -76,7 +76,7 @@ function onDrop(id: string) {
             >
               <span v-if="c.key === 'sort'" class="ph-handle">⠿</span>
               <span v-else-if="c.key === 'number'" class="ph-num">+</span>
-              <span v-else-if="c.key === 'image'" class="ph-img">＋</span>
+              <span v-else-if="c.key === 'image'" class="ph-img" @click.stop="addShots(1)">＋</span>
               <span v-else-if="c.key === 'content'" class="ph-text">点击创建新分镜…</span>
               <span v-else class="ph-dash">—</span>
             </div>
