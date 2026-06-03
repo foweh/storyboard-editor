@@ -1,5 +1,5 @@
 import type { Shot } from '../types'
-import { state, uid, reorder, autoFitWidths, autoFitWidthsDebounced } from './shared'
+import { state, uid, reorder, autoFitWidths, autoFitWidthsDebounced, removeShotImage } from './shared'
 
 export function addShots(count: number = 1) {
   const sid = state.activeSceneId
@@ -22,11 +22,16 @@ export function addShots(count: number = 1) {
 
 export function removeShot(id: string) {
   const i = state.shots.findIndex(s => s.id === id)
-  if (i > -1) { state.shots.splice(i, 1); reorder() }
+  if (i > -1) {
+    removeShotImage(id)
+    state.shots.splice(i, 1)
+    reorder()
+  }
 }
 
 export function removeShots(ids: string[]) {
   const set = new Set(ids)
+  ids.forEach(id => removeShotImage(id))
   state.shots = state.shots.filter(s => !set.has(s.id))
   reorder()
 }

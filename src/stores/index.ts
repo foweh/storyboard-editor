@@ -1,4 +1,4 @@
-export { state, activeShots, resetAll, autoFitWidths, autoFitWidthsDebounced, listProjectsMeta, switchProject, deleteProject } from './shared'
+export { state, activeShots, resetAll, autoFitWidths, autoFitWidthsDebounced, listProjectsMeta, switchProject, deleteProject, saveShotImage, removeShotImage } from './shared'
 export { addShots, removeShot, removeShots, updateShot, moveShot } from './shotStore'
 export { addScene, removeScene, setActiveScene } from './sceneStore'
 export { toggleCol, setColWidth } from './columnStore'

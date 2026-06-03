@@ -10,6 +10,36 @@ export function uid(): string {
 const OLD_KEY = 'fenjing-data'
 const PROJECTS_KEY = 'fenjing-projects'
 
+/* ── 图片独立存储（避免 localStorage 容量溢出） ── */
+const IMAGE_PREFIX = 'fenjing-img-'
+
+export function saveShotImage(shotId: string, dataUrl: string | null) {
+  const key = IMAGE_PREFIX + shotId
+  try {
+    if (dataUrl) {
+      localStorage.setItem(key, dataUrl)
+    } else {
+      localStorage.removeItem(key)
+    }
+    return true
+  } catch {
+    console.warn('图片存储失败，可能已达容量上限')
+    return false
+  }
+}
+
+export function loadShotImage(shotId: string): string | null {
+  try {
+    return localStorage.getItem(IMAGE_PREFIX + shotId)
+  } catch {
+    return null
+  }
+}
+
+export function removeShotImage(shotId: string) {
+  localStorage.removeItem(IMAGE_PREFIX + shotId)
+}
+
 export interface ProjectMeta {
   id: string
   name: string
@@ -91,6 +121,21 @@ if (!activeProjectId || !registry.projects.find(p => p.id === activeProjectId)) 
 
 const loaded = readProjectData(activeProjectId) ?? {}
 
+// 恢复图片数据（主数据不存 base64，从独立 key 加载）
+if (loaded.shots) {
+  loaded.shots.forEach((s: any) => {
+    // 兼容旧格式：主数据中还有 base64 → 迁移到独立存储
+    if (s.image && typeof s.image === 'string' && s.image.startsWith('data:')) {
+      saveShotImage(s.id, s.image)
+    }
+    // 从独立存储加载
+    if (!s.image || s.image === true) {
+      const img = loadShotImage(s.id)
+      if (img) s.image = img
+    }
+  })
+}
+
 const defaultColumns: ColumnDef[] = [
   { key: 'sort',        label: '排序',     visible: true,  width: 56,  locked: true },
   { key: 'number',      label: '镜号',     visible: true,  width: 64,  locked: true },
@@ -149,7 +194,17 @@ function snapshot(): any {
 }
 
 export function persist() {
-  writeProjectData(activeProjectId, snapshot())
+  const data = snapshot()
+
+  // 图片数据独立存储，主数据体不存 base64
+  data.shots.forEach((s: any) => {
+    if (s.image && typeof s.image === 'string' && s.image.startsWith('data:')) {
+      saveShotImage(s.id, s.image)
+      s.image = true // 标记有图，不存实际数据
+    }
+  })
+
+  writeProjectData(activeProjectId, data)
 
   // 更新注册表
   const reg = readRegistry()
