@@ -10,34 +10,91 @@ export function uid(): string {
 const OLD_KEY = 'fenjing-data'
 const PROJECTS_KEY = 'fenjing-projects'
 
-/* ── 图片独立存储（避免 localStorage 容量溢出） ── */
-const IMAGE_PREFIX = 'fenjing-img-'
+/* ── 图片独立存储（IndexedDB，容量远大于 localStorage） ── */
 
-export function saveShotImage(shotId: string, dataUrl: string | null) {
-  const key = IMAGE_PREFIX + shotId
-  try {
-    if (dataUrl) {
-      localStorage.setItem(key, dataUrl)
-    } else {
-      localStorage.removeItem(key)
+const DB_NAME = 'fenjing-images'
+const STORE_NAME = 'images'
+let _dbPromise: Promise<IDBDatabase> | null = null
+
+function openImageDB(): Promise<IDBDatabase> {
+  if (_dbPromise) return _dbPromise
+  _dbPromise = new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1)
+    req.onupgradeneeded = () => {
+      req.result.createObjectStore(STORE_NAME, { keyPath: 'id' })
     }
+    req.onsuccess = () => resolve(req.result)
+    req.onerror = () => reject(req.error)
+  })
+  return _dbPromise
+}
+
+export async function saveShotImage(shotId: string, dataUrl: string | null): Promise<boolean> {
+  try {
+    const db = await openImageDB()
+    const tx = db.transaction(STORE_NAME, 'readwrite')
+    const store = tx.objectStore(STORE_NAME)
+    if (dataUrl) {
+      store.put({ id: shotId, data: dataUrl })
+    } else {
+      store.delete(shotId)
+    }
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve()
+      tx.onerror = () => reject(tx.error)
+    })
     return true
-  } catch {
-    console.warn('图片存储失败，可能已达容量上限')
+  } catch (e) {
+    console.warn('图片存储失败', e)
     return false
   }
 }
 
-export function loadShotImage(shotId: string): string | null {
+export async function loadShotImage(shotId: string): Promise<string | null> {
   try {
-    return localStorage.getItem(IMAGE_PREFIX + shotId)
+    const db = await openImageDB()
+    const tx = db.transaction(STORE_NAME, 'readonly')
+    const store = tx.objectStore(STORE_NAME)
+    const req = store.get(shotId)
+    const result = await new Promise<any>((resolve, reject) => {
+      req.onsuccess = () => resolve(req.result)
+      req.onerror = () => reject(req.error)
+    })
+    return result?.data ?? null
   } catch {
     return null
   }
 }
 
-export function removeShotImage(shotId: string) {
-  localStorage.removeItem(IMAGE_PREFIX + shotId)
+export async function removeShotImage(shotId: string): Promise<void> {
+  try {
+    const db = await openImageDB()
+    const tx = db.transaction(STORE_NAME, 'readwrite')
+    tx.objectStore(STORE_NAME).delete(shotId)
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve()
+      tx.onerror = () => reject(tx.error)
+    })
+  } catch { /* ignore */ }
+}
+
+/** 将旧 localStorage 中的图片迁移到 IndexedDB */
+async function migrateLegacyImages() {
+  const OLD_PREFIX = 'fenjing-img-'
+  let count = 0
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (key?.startsWith(OLD_PREFIX)) {
+      const shotId = key.slice(OLD_PREFIX.length)
+      const dataUrl = localStorage.getItem(key)
+      if (dataUrl) {
+        await saveShotImage(shotId, dataUrl)
+        localStorage.removeItem(key)
+        count++
+      }
+    }
+  }
+  if (count > 0) console.log(`已迁移 ${count} 张图片从 localStorage 到 IndexedDB`)
 }
 
 export interface ProjectMeta {
@@ -76,8 +133,14 @@ function readProjectData(id: string): any {
   return null
 }
 
-function writeProjectData(id: string, data: any) {
-  localStorage.setItem(projectKey(id), JSON.stringify(data))
+function writeProjectData(id: string, data: any): boolean {
+  try {
+    localStorage.setItem(projectKey(id), JSON.stringify(data))
+    return true
+  } catch (e) {
+    console.warn('项目数据保存失败，存储空间可能不足', e)
+    return false
+  }
 }
 
 function removeProjectData(id: string) {
@@ -121,24 +184,28 @@ if (!activeProjectId || !registry.projects.find(p => p.id === activeProjectId)) 
 
 const loaded = readProjectData(activeProjectId) ?? {}
 
-// 恢复图片数据（主数据不存 base64，从独立 key 加载）
+// 恢复图片数据（主数据不存 base64，从 IndexedDB 异步加载）
+// image: true 表示"有图在 IndexedDB 中"，异步填充；null 表示无图
 if (loaded.shots) {
   loaded.shots.forEach((s: any) => {
-    // 兼容旧格式：主数据中还有 base64 → 迁移到独立存储
+    // 兼容旧格式：主数据中还有 base64 → 标记为 true，后续迁移到 IndexedDB
     if (s.image && typeof s.image === 'string' && s.image.startsWith('data:')) {
-      saveShotImage(s.id, s.image)
+      (s.image as any) = true  // 会在下方的异步加载中处理
     }
-    // 从独立存储加载
-    if (!s.image || s.image === true) {
-      const img = loadShotImage(s.id)
-      if (img) {
-        s.image = img
-      } else if (s.image === true) {
-        s.image = null // 标记有图但存丢失 → 安全降级
-      }
-    }
+    if (s.image === undefined) s.image = null
   })
 }
+
+// 异步：先迁移旧 localStorage 图片，再从 IndexedDB 加载图片到 state
+;(async () => {
+  await migrateLegacyImages()
+  for (const s of state.shots) {
+    if ((s.image as any) === true) {
+      const img = await loadShotImage(s.id)
+      s.image = img ?? null
+    }
+  }
+})()
 
 const defaultColumns: ColumnDef[] = [
   { key: 'sort',        label: '排序',     visible: true,  width: 56,  locked: true },
@@ -185,6 +252,9 @@ export function reorder() {
 
 /* ── 持久化 ── */
 
+/** persist 串行队列，防止并发覆盖 */
+let _persistChain: Promise<void> = Promise.resolve()
+
 function snapshot(): any {
   return {
     project: state.project,
@@ -197,19 +267,22 @@ function snapshot(): any {
   }
 }
 
-export function persist() {
+async function _persistImpl() {
   const data = snapshot()
 
-  // 图片数据独立存储，主数据体不存 base64
-  // 保存成功后才标记清除，防止丢失
+  // 图片数据存 IndexedDB，主数据只存标记 true
+  const saveTasks: Promise<boolean>[] = []
   data.shots.forEach((s: any) => {
     if (s.image && typeof s.image === 'string' && s.image.startsWith('data:')) {
-      if (saveShotImage(s.id, s.image)) {
-        s.image = true // 标记有图，不存实际数据
-      }
-      // 保存失败则保留 base64 在主数据中
+      const task = saveShotImage(s.id, s.image).then(ok => {
+        if (ok) (s.image as any) = true // 主数据只保留标记
+        return ok
+      })
+      saveTasks.push(task)
     }
   })
+  // 等待所有图片存完，再写主数据（防止主数据先保存但图片没存完）
+  await Promise.allSettled(saveTasks)
 
   writeProjectData(activeProjectId, data)
 
@@ -225,9 +298,14 @@ export function persist() {
   writeRegistry(reg)
 }
 
+export function persist(): Promise<void> {
+  _persistChain = _persistChain.then(() => _persistImpl())
+  return _persistChain
+}
+
 watch(() => ({ ...state, shots: [...state.shots], scenes: [...state.scenes] }), () => persist(), { deep: true })
 
-export function resetAll(projectName?: string) {
+export async function resetAll(projectName?: string) {
   const firstId = uid()
   state.shots = []
   state.scenes = [{ id: firstId, name: '第1场', order: 0 }]
@@ -245,21 +323,21 @@ export function resetAll(projectName?: string) {
   })
   registry.activeId = activeProjectId
   writeRegistry(registry)
-  persist()
+  await persist()
 }
 
 /* ── 项目切换 ── */
 
 export function saveCurrentProjectToRegistry() {
-  persist()
+  return persist()
 }
 
-export function switchProject(id: string) {
+export async function switchProject(id: string) {
   const data = readProjectData(id)
   if (!data) return
 
-  // 先保存当前项目
-  persist()
+  // 先保存当前项目（等待完成）
+  await persist()
 
   // 切换到目标项目
   activeProjectId = id
@@ -281,7 +359,14 @@ export function listProjectsMeta(): ProjectMeta[] {
   return readRegistry().projects
 }
 
-export function deleteProject(id: string) {
+export async function deleteProject(id: string) {
+  // 删除项目时清理其图片
+  const data = readProjectData(id)
+  if (data?.shots) {
+    for (const s of data.shots) {
+      if (s.id) await removeShotImage(s.id)
+    }
+  }
   removeProjectData(id)
   const reg = readRegistry()
   reg.projects = reg.projects.filter(p => p.id !== id)
@@ -292,7 +377,7 @@ export function deleteProject(id: string) {
 
   // 如果删的是当前项目，切换到第一个
   if (id === activeProjectId && reg.activeId) {
-    switchProject(reg.activeId)
+    await switchProject(reg.activeId)
   }
 }
 
