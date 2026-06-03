@@ -28,7 +28,7 @@ const emit = defineEmits<{
       batch: state.batch,
     }]"
     draggable="true"
-    @dragstart.prevent="emit('dragStart', shot.id)"
+    @dragstart="(e) => { e.dataTransfer?.setData('text/plain', shot.id); emit('dragStart', shot.id) }"
     @dragover="(e) => emit('dragOver', e, shot.id)"
     @dragleave="emit('dragLeave', shot.id)"
     @drop="emit('drop', shot.id)"

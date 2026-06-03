@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { state, activeShots } from '../stores/index'
+import { state, activeShots, updateShot } from '../stores/index'
+import RichCell from './RichCell.vue'
+import ImageCell from './ImageCell.vue'
 
 const sorted = computed(() =>
   activeShots.value.sort((a, b) => a.order - b.order)
 )
 
-const sel = ref<string | null>(null)
+const selectedId = ref<string | null>(null)
 </script>
 
 <template>
@@ -25,19 +27,45 @@ const sel = ref<string | null>(null)
       <div
         v-for="s in sorted"
         :key="s.id"
-        :class="['board-card', { active: sel === s.id }]"
-        @click="sel = s.id"
+        :class="['board-card', { active: selectedId === s.id }]"
+        @click="selectedId = s.id"
       >
-        <div class="card-img">
-          <img v-if="s.image" :src="s.image" alt="" />
-          <div v-else class="card-noimg">🎬</div>
+        <!-- 画面（可点击上传/替换） -->
+        <div class="card-img" @click.stop>
+          <ImageCell
+            :image="s.image"
+            @update="(v) => updateShot(s.id, { image: v })"
+          />
         </div>
+
+        <!-- 元信息行：镜号 + 景别 + 时长 -->
         <div class="card-meta">
           <span class="card-num">#{{ s.number }}</span>
-          <span v-if="s.frame" class="card-tag">{{ s.frame }}</span>
-          <span v-if="s.duration" class="card-tag">{{ s.duration }}s</span>
+          <span class="card-tag-wrap" @click.stop>
+            <RichCell
+              :modelValue="s.frame"
+              class="card-tag"
+              @update:modelValue="(v) => updateShot(s.id, { frame: String(v) })"
+            />
+          </span>
+          <span class="card-tag-wrap" @click.stop>
+            <RichCell
+              :modelValue="s.duration"
+              type="number"
+              class="card-tag card-tag-dur"
+              @update:modelValue="(v) => updateShot(s.id, { duration: Number(v) })"
+            />
+          </span>
         </div>
-        <div v-if="s.content" class="card-text" v-html="s.content" />
+
+        <!-- 内容（可编辑） -->
+        <div class="card-text" @click.stop>
+          <RichCell
+            :modelValue="s.content"
+            rich
+            @update:modelValue="(v) => updateShot(s.id, { content: String(v) })"
+          />
+        </div>
       </div>
     </div>
   </div>
@@ -45,7 +73,7 @@ const sel = ref<string | null>(null)
 
 <style scoped>
 .board { height: 100%; display: flex; flex-direction: column; }
-.board-head { display: flex; align-items: center; gap: 10px; padding: 0 0 16px; }
+.board-head { display: flex; align-items: center; gap: 10px; padding: 0 0 16px; flex-shrink: 0; }
 
 .view-title { font-size: 18px; font-weight: 700; }
 .view-count { font-size: 12px; color: var(--text-muted); }
@@ -56,6 +84,7 @@ const sel = ref<string | null>(null)
   gap: 12px;
   flex: 1;
   overflow: auto;
+  align-content: start;
 }
 
 .board-card {
@@ -86,9 +115,12 @@ const sel = ref<string | null>(null)
   overflow: hidden;
 }
 
-.card-img img { width: 100%; height: 100%; object-fit: cover; }
-
-.card-noimg { font-size: 28px; opacity: 0.25; }
+.card-img :deep(.img-cell) {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  border: none;
+}
 
 .card-meta {
   display: flex;
@@ -97,27 +129,66 @@ const sel = ref<string | null>(null)
   align-items: center;
 }
 
-.card-num { font-size: 12px; font-weight: 600; color: var(--accent); }
+.card-num {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+}
 
-.card-tag {
-  font-size: 10px;
+.card-tag-wrap {
+  display: inline-flex;
+  min-width: 0;
+}
+
+.card-tag-wrap :deep(.rich-cell) {
+  min-height: 20px;
   padding: 1px 5px;
-  background: var(--bg-hover);
   border-radius: 3px;
+  font-size: 10px;
+  background: var(--bg-hover);
   color: var(--text-muted);
 }
 
-.card-text {
-  padding: 4px 10px 10px;
-  font-size: 11px;
-  color: var(--text-secondary);
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+.card-tag-wrap :deep(.rich-cell:hover) {
+  background: #e2e8f0;
 }
 
-.card-text :deep(p) { margin: 1px 0; }
+.card-tag-wrap :deep(.cell-pv) {
+  font-size: 10px;
+  -webkit-line-clamp: 1;
+}
+
+.card-tag-dur :deep(.cell-inp) {
+  font-size: 10px;
+  padding: 1px 4px;
+  min-height: 18px;
+}
+
+/* 内容区域 */
+.card-text {
+  padding: 4px 10px 10px;
+  min-height: 30px;
+}
+
+.card-text :deep(.rich-cell) {
+  min-height: 22px;
+  padding: 2px 4px;
+}
+
+.card-text :deep(.cell-pv) {
+  font-size: 11px;
+  color: var(--text-secondary);
+  -webkit-line-clamp: 3;
+}
+
+.card-text :deep(.cell-pv p) { margin: 1px 0; }
+
+.card-text :deep(.rich-editor) {
+  font-size: 11px;
+  min-height: 22px;
+  padding: 2px 4px;
+}
 
 .empty {
   display: flex;
