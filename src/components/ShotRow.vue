@@ -28,22 +28,19 @@ const emit = defineEmits<{
       selected: selected && state.batch,
       batch: state.batch,
     }]"
-    draggable="true"
-    @dragstart="(e) => {
-      // 只有从排序列（⠿手柄）拖拽才生效
-      const handle = (e.target as HTMLElement).closest('.s-sort')
-      if (!handle) { e.preventDefault(); return }
-      e.dataTransfer!.effectAllowed = 'move'
-      e.dataTransfer!.setData('text/plain', shot.id)
-      emit('dragStart', shot.id)
-    }"
     @dragover="(e) => emit('dragOver', e, shot.id)"
     @dragleave="emit('dragLeave', shot.id)"
     @drop="emit('drop', shot.id)"
-    @dragend="emit('drop', '')"
   >
     <!-- 排序 -->
     <div
+      draggable="true"
+      @dragstart="(e) => {
+        e.dataTransfer!.effectAllowed = 'move'
+        e.dataTransfer!.setData('text/plain', shot.id)
+        emit('dragStart', shot.id)
+      }"
+      @dragend="emit('drop', '')"
       v-if="state.cols.find(c => c.key === 'sort')?.visible"
       class="s-cell s-sort"
       :style="{ width: state.cols.find(c => c.key === 'sort')?.width + 'px' }"
@@ -183,7 +180,8 @@ const emit = defineEmits<{
 .s-sort { justify-content: center; flex-direction: column; gap: 1px; cursor: grab; }
 .s-sort:active { cursor: grabbing; }
 .s-num { justify-content: center; }
-.s-img { padding: 2px 4px; display: flex; align-items: center; justify-content: center; }
+.s-img { padding: 2px; display: flex; align-items: center; justify-content: center; min-width: 0; }
+.s-img :deep(.img-cell) { width: 100%; max-width: 100px; }
 .s-text { align-items: stretch; }
 .s-content { flex: 1; min-width: 80px; }
 .s-check { width: 36px; justify-content: center; }

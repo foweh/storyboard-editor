@@ -35,6 +35,7 @@ const { begin } = useColResize()
 .th-cell {
   display: flex;
   align-items: center;
+  justify-content: center;
   padding: 7px 8px;
   font-size: 11.5px;
   font-weight: 600;

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { state, activeShots, moveShot, toggleSel } from '../stores/index'
+import { state, activeShots, moveShot, toggleSel, addShots } from '../stores/index'
 import TableHeader from './TableHeader.vue'
 import ShotRow from './ShotRow.vue'
 import NewShotMenu from './NewShotMenu.vue'
@@ -61,6 +61,27 @@ function onDrop(id: string) {
             @drop="onDrop"
             @toggleSelect="toggleSel"
           />
+          <!-- 透明占位行：点击创建新分镜，创建后自动下移 -->
+          <div
+            v-if="activeShots.length > 0"
+            class="shot-row new-shot-placeholder"
+            @click="addShots(1)"
+            title="点击创建新分镜"
+          >
+            <div
+              v-for="c in state.cols.filter(x => x.visible)"
+              :key="c.key"
+              class="s-cell"
+              :style="{ width: c.width + 'px' }"
+            >
+              <span v-if="c.key === 'sort'" class="ph-handle">⠿</span>
+              <span v-else-if="c.key === 'number'" class="ph-num">+</span>
+              <span v-else-if="c.key === 'image'" class="ph-img">＋</span>
+              <span v-else-if="c.key === 'content'" class="ph-text">点击创建新分镜…</span>
+              <span v-else class="ph-dash">—</span>
+            </div>
+            <div v-if="state.batch" class="s-cell s-check" />
+          </div>
           <div v-if="activeShots.length === 0" class="sb-empty">
             <span class="empty-icon">🎬</span>
             <p>还没有分镜，点「新建」开始制作</p>
@@ -155,4 +176,52 @@ function onDrop(id: string) {
   color: var(--text-muted);
   flex-shrink: 0;
 }
+
+/* ── 透明占位行 ── */
+.new-shot-placeholder {
+  cursor: pointer;
+  opacity: 0.15;
+  transition: opacity 0.2s ease, background 0.2s ease;
+  border-top: 1.5px dashed var(--border);
+  min-height: 52px;
+  user-select: none;
+}
+
+.new-shot-placeholder:hover {
+  opacity: 0.5;
+  background: var(--accent-light);
+  border-top-color: var(--accent);
+}
+
+.new-shot-placeholder .s-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  min-height: 52px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  border-right: 1px solid #f1f5f9;
+}
+
+.ph-handle { font-size: 14px; color: #cbd5e1; line-height: 1; }
+
+.ph-num {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.ph-img { font-size: 14px; color: #94a3b8; line-height: 1; }
+
+.ph-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.ph-dash { font-size: 12px; color: #cbd5e1; }
+
+.new-shot-placeholder .s-check { justify-content: center; }
 </style>
