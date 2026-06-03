@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, nextTick } from 'vue'
-import { state, toJSON, toCSV, resetAll } from '../stores/index'
+import { ref, nextTick, onMounted } from 'vue'
+import { state, toJSON, toCSV, resetAll, listProjectsMeta, switchProject, deleteProject } from '../stores/index'
 import type { Tab } from '../types'
+import type { ProjectMeta } from '../stores/shared'
 
 const tabs: { key: Tab; label: string }[] = [
   { key: 'storyboard', label: '分镜制作' },
@@ -14,6 +15,42 @@ const showExport = ref(false)
 const showNewProject = ref(false)
 const newProjectName = ref('')
 const nameInput = ref<HTMLInputElement | null>(null)
+const showProjects = ref(false)
+const projectList = ref<ProjectMeta[]>([])
+
+function refreshProjectList() {
+  projectList.value = listProjectsMeta()
+}
+
+function openProjects() {
+  refreshProjectList()
+  showProjects.value = true
+}
+
+function doSwitchProject(id: string) {
+  switchProject(id)
+  showProjects.value = false
+}
+
+function doDeleteProject(id: string, name: string) {
+  if (confirm(`确认删除项目「${name}」？不可恢复。`)) {
+    deleteProject(id)
+    refreshProjectList()
+  }
+}
+
+function formatTime(iso: string) {
+  try {
+    const d = new Date(iso)
+    return d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  } catch { return iso }
+}
+
+function isActiveProject(id: string) {
+  return projectList.value.find(p => p.id === id)?.name === state.project
+}
+
+onMounted(refreshProjectList)
 
 function openNewProject() {
   newProjectName.value = ''
@@ -73,6 +110,9 @@ function dlCSV() {
       <button class="h-btn" @click="openNewProject()" title="新建项目">
         <span>📁</span><span>新建项目</span>
       </button>
+      <button class="h-btn" @click="openProjects()" title="项目记录">
+        <span>📂</span><span>项目记录</span>
+      </button>
       <div class="avatar" title="本地模式">👤</div>
     </div>
 
@@ -94,6 +134,31 @@ function dlCSV() {
           <div class="modal-actions">
             <button class="btn" @click="showNewProject = false">取消</button>
             <button class="btn btn-primary" @click="confirmNewProject">创建项目</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <Teleport to="body">
+      <div v-if="showProjects" class="modal-mask" @click.self="showProjects = false">
+        <div class="modal modal-wide">
+          <h3>项目记录</h3>
+          <p v-if="projectList.length === 0" class="empty-hint">暂无已保存的项目</p>
+          <div v-else class="proj-list">
+            <div
+              v-for="p in projectList"
+              :key="p.id"
+              :class="['proj-item', { active: isActiveProject(p.id) }]"
+            >
+              <div class="proj-info" @click="doSwitchProject(p.id)">
+                <span class="proj-name">{{ p.name }}</span>
+                <span class="proj-meta">{{ p.shotCount }} 镜 · {{ formatTime(p.updatedAt) }}</span>
+              </div>
+              <button class="proj-del" @click="doDeleteProject(p.id, p.name)" title="删除项目">✕</button>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button class="btn" @click="showProjects = false">关闭</button>
           </div>
         </div>
       </div>
@@ -324,4 +389,68 @@ function dlCSV() {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-light);
 }
+
+/* ── 项目记录列表 ── */
+.modal-wide { min-width: 420px; }
+
+.empty-hint { color: var(--text-muted); font-size: 13px; padding: 12px 0; }
+
+.proj-list { margin: 0 0 16px; max-height: 320px; overflow-y: auto; }
+
+.proj-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  cursor: default;
+  transition: background 0.1s;
+  border: 1.5px solid transparent;
+  margin-bottom: 4px;
+}
+
+.proj-item:hover { background: var(--bg-hover); }
+.proj-item.active {
+  background: var(--accent-light);
+  border-color: var(--accent);
+}
+
+.proj-info {
+  flex: 1;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.proj-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.proj-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.proj-del {
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 11px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: all 0.12s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.proj-item:hover .proj-del { opacity: 1; }
+.proj-del:hover { background: #fee2e2; color: var(--danger); }
 </style>
