@@ -8,20 +8,37 @@ import BatchBar from './BatchBar.vue'
 
 let dragId: string | null = null
 let overId: string | null = null
+/** 'before' = 插入到目标行上方，'after' = 插入到目标行下方 */
+let overPos: 'before' | 'after' = 'before'
 
 function onStart(id: string) { dragId = id }
+
 function onOver(e: DragEvent, id: string) {
   e.preventDefault()
-  if (id !== overId && id !== dragId) overId = id
+  if (id === dragId) {
+    if (overId === id) overId = null
+    return
+  }
+  // 计算鼠标在目标行中的位置 → 决定插入线在上方还是下方
+  const row = (e.target as HTMLElement).closest('.shot-row')
+  const rect = row?.getBoundingClientRect()
+  if (row && rect) {
+    const midY = rect.top + rect.height / 2
+    overPos = e.clientY < midY ? 'before' : 'after'
+  }
+  overId = id
 }
 function onLeave(id: string) { if (overId === id) overId = null }
+
 function onDrop(id: string) {
-  if (!id) { dragId = null; overId = null; return }
-  if (dragId && dragId !== id) {
+  if (id && dragId && dragId !== id) {
     const t = activeShots.value.find(s => s.id === id)
-    if (t) moveShot(dragId, t.order)
+    if (t) {
+      // before → 插在 target 的位置；after → 插在 target 之后
+      moveShot(dragId, overPos === 'before' ? t.order : t.order + 1)
+    }
   }
-  dragId = null; overId = null
+  dragId = null; overId = null; overPos = 'before'
 }
 </script>
 
@@ -53,7 +70,8 @@ function onDrop(id: string) {
             :key="shot.id"
             :shot="shot"
             :dragging="dragId === shot.id"
-            :dragOver="overId === shot.id"
+            :dragOverBefore="overId === shot.id && overPos === 'before'"
+            :dragOverAfter="overId === shot.id && overPos === 'after'"
             :selected="state.selected.has(shot.id)"
             @dragStart="onStart"
             @dragOver="onOver"

@@ -7,7 +7,8 @@ import ImageCell from './ImageCell.vue'
 const props = defineProps<{
   shot: Shot
   dragging: boolean
-  dragOver: boolean
+  dragOverBefore: boolean
+  dragOverAfter: boolean
   selected: boolean
 }>()
 
@@ -43,7 +44,8 @@ function startResize(e: MouseEvent) {
   <div
     :class="['shot-row', {
       dragging,
-      'drag-over': dragOver,
+      'drag-over-before': dragOverBefore,
+      'drag-over-after': dragOverAfter,
       selected: selected && state.batch,
       batch: state.batch,
     }]"
@@ -184,8 +186,14 @@ function startResize(e: MouseEvent) {
 
 .shot-row:hover { background: #f8fafc; }
 .shot-row:hover .row-del { opacity: 1; }
-.shot-row.dragging { opacity: 0.3; background: #eef2ff; }
-.shot-row.drag-over { border-top: 2px solid var(--accent); }
+.shot-row.dragging {
+  opacity: 0.2;
+  background: #eef2ff;
+  outline: 2px dashed var(--accent);
+  outline-offset: -1px;
+}
+.shot-row.drag-over-before { border-top: 2.5px solid var(--accent); }
+.shot-row.drag-over-after { border-bottom: 2.5px solid var(--accent); }
 .shot-row.selected { background: #eef2ff; }
 
 .s-cell {
