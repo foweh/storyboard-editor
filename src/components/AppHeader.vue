@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, nextTick } from 'vue'
 import { state, toJSON, toCSV, resetAll } from '../stores/index'
 import type { Tab } from '../types'
 
@@ -11,7 +11,21 @@ const tabs: { key: Tab; label: string }[] = [
 ]
 
 const showExport = ref(false)
-const showReset = ref(false)
+const showNewProject = ref(false)
+const newProjectName = ref('')
+const nameInput = ref<HTMLInputElement | null>(null)
+
+function openNewProject() {
+  newProjectName.value = ''
+  showNewProject.value = true
+  nextTick(() => nameInput.value?.focus())
+}
+
+function confirmNewProject() {
+  const name = newProjectName.value.trim() || undefined
+  resetAll(name)
+  showNewProject.value = false
+}
 
 function dlJSON() {
   const b = new Blob([toJSON()], { type: 'application/json' })
@@ -56,18 +70,30 @@ function dlCSV() {
         </div>
       </div>
       <div class="header-divider" />
-      <button class="h-btn icon" @click="showReset = true" title="重置">↻</button>
+      <button class="h-btn" @click="openNewProject()" title="新建项目">
+        <span>📁</span><span>新建项目</span>
+      </button>
       <div class="avatar" title="本地模式">👤</div>
     </div>
 
     <Teleport to="body">
-      <div v-if="showReset" class="modal-mask" @click.self="showReset = false">
+      <div v-if="showNewProject" class="modal-mask" @click.self="showNewProject = false">
         <div class="modal">
-          <h3>重置项目</h3>
-          <p>将清除所有分镜数据，不可恢复。</p>
+          <h3>新建项目</h3>
+          <p>将清除当前所有分镜数据，开始一个全新的项目。此操作不可恢复。</p>
+          <div class="modal-field">
+            <label>项目名称</label>
+            <input
+              v-model="newProjectName"
+              class="modal-input"
+              placeholder="未命名项目"
+              @keydown.enter="confirmNewProject"
+              ref="nameInput"
+            />
+          </div>
           <div class="modal-actions">
-            <button class="btn" @click="showReset = false">取消</button>
-            <button class="btn btn-danger" @click="resetAll(); showReset = false">确认重置</button>
+            <button class="btn" @click="showNewProject = false">取消</button>
+            <button class="btn btn-primary" @click="confirmNewProject">创建项目</button>
           </div>
         </div>
       </div>
@@ -256,6 +282,14 @@ function dlCSV() {
 
 .btn:hover { border-color: var(--accent); color: var(--accent); }
 
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.btn-primary:hover { opacity: 0.9; color: #fff; }
+
 .btn-danger {
   background: var(--danger);
   color: #fff;
@@ -263,4 +297,31 @@ function dlCSV() {
 }
 
 .btn-danger:hover { opacity: 0.9; color: #fff; }
+
+/* Modal 表单 */
+.modal-field { margin-bottom: 16px; }
+.modal-field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.modal-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.modal-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
 </style>

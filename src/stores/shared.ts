@@ -75,13 +75,13 @@ export function persist() {
 
 watch(() => ({ ...state, shots: [...state.shots], scenes: [...state.scenes] }), () => persist(), { deep: true })
 
-export function resetAll() {
+export function resetAll(projectName?: string) {
   const firstId = uid()
   state.shots = []
   state.scenes = [{ id: firstId, name: '第1场', order: 0 }]
   state.activeSceneId = firstId
   state.nextNum = 1
-  state.project = '未命名项目'
+  state.project = projectName || '未命名项目'
   persist()
 }
 

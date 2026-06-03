@@ -37,6 +37,11 @@ export function updateShot(id: string, patch: Partial<Shot>) {
   autoFitWidthsDebounced()
 }
 
+/**
+ * 拖拽排序
+ * @param id      被拖拽的分镜 id
+ * @param target  目标 1-indexed 订单号（before → t.order, after → t.order+1）
+ */
 export function moveShot(id: string, target: number) {
   const s = state.shots.find(x => x.id === id)
   if (!s) return
@@ -45,7 +50,14 @@ export function moveShot(id: string, target: number) {
     .sort((a, b) => a.order - b.order)
   const idx = pool.findIndex(x => x.id === id)
   if (idx < 0) return
+
+  // 先移除自己，再按 target 订单号找到插入位置
   pool.splice(idx, 1)
-  pool.splice(Math.min(target, pool.length), 0, s)
+
+  // 在剩余 pool 中找订单号为 target 的 shot
+  const targetIdx = pool.findIndex(x => x.order === target)
+  const insertAt = targetIdx >= 0 ? targetIdx : pool.length
+
+  pool.splice(insertAt, 0, s)
   pool.forEach((x, i) => { x.order = i + 1 })
 }
